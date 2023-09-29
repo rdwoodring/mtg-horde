@@ -19,7 +19,7 @@ import RemoveX, {
 
 function useZombieTokenCards() {
     const fetchZombieTokenCards = () => {
-        return axios.get<{data: Array<Card>}>('https://api.scryfall.com/cards/search?q=zombie+type:token+-is:funny+power%3e0+tou%3e0')
+        return axios.get<{data: Array<Card>}>('https://api.scryfall.com/cards/search?q=type:creature+type:token+type:zombie+-is:funny+power%3e0+tou%3e0')
             .then((res) => res.data.data)
         
     };
@@ -35,7 +35,7 @@ function useZombieTokenCards() {
 
 function useRandomZombieCard(wave: number) {
     const fetchRandomZombieCard = useCallback(() => {
-        return axios.get<Card>('https://api.scryfall.com/cards/random?q=zombie+color:black+-t:token+-is:funny')
+        return axios.get<Card>('https://api.scryfall.com/cards/random?q=type:zombie+type:creature+color:black+-t:token+-is:funny')
             .then(res => res.data);
     }, [])
 
@@ -135,20 +135,40 @@ function App() {
         return image; 
     }
 
+    const handleClickWeakenHorde = useCallback(() => {
+        setPlayedCards((currentPlayedCards) => currentPlayedCards + 1);
+    }, []);
+
     return (
         <>
             <h1>Current Wave{wave > 0 ? `: ${wave}` : ''}</h1>
-            <div>
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
                 <div>
                     Horde Strength:
                 </div>
                 <div>
                     {maxCards - playedCards} / {maxCards}
                 </div>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                    rowGap: '16px',
+                    columnGap: '16px'
+                }}>
+                    <button onClick={handleClickGenerateHorde} disabled={loadingNonTokenZombie || loadingZombieTokens}>
+                        {Object.keys(selectedZombieTokens).length ? 'Release More of the Horde!' : 'Release the Horde'}
+                    </button>
+                    <button onClick={handleClickWeakenHorde}>
+                        Decrease the Horde
+                    </button>
+                </div>
             </div>
-            <button onClick={handleClickGenerateHorde} disabled={loadingNonTokenZombie || loadingZombieTokens}>
-                {Object.keys(selectedZombieTokens).length ? 'The Horde Strengthens...' : 'Release the Horde'}
-            </button>
+            <hr />
+            
 
             <ul style={{
                 display: 'flex',
