@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css';
 
 import useSwr from 'swr';
@@ -19,7 +19,7 @@ import RemoveX, {
 
 function useZombieTokenCards() {
     const fetchZombieTokenCards = () => {
-        return axios.get<{data: Array<Card>}>('https://api.scryfall.com/cards/search?q=type:creature+type:token+type:zombie+-is:funny+power%3e0+tou%3e0')
+        return axios.get<{data: Array<Card>}>('https://api.scryfall.com/cards/search?q=-o:flying+type:creature+type:token+type:zombie+-is:funny+power%3e0+tou%3e0')
             .then((res) => res.data.data)
         
     };
@@ -35,7 +35,7 @@ function useZombieTokenCards() {
 
 function useRandomZombieCard(wave: number) {
     const fetchRandomZombieCard = useCallback(() => {
-        return axios.get<Card>('https://api.scryfall.com/cards/random?q=type:zombie+type:creature+color:black+-t:token+-is:funny')
+        return axios.get<Card>('https://api.scryfall.com/cards/random?q=-o:flying+type:zombie+type:creature+color:black+-t:token+-is:funny+power%3e0+tou%3e0')
             .then(res => res.data);
     }, [])
 
@@ -47,6 +47,24 @@ function useRandomZombieCard(wave: number) {
         loading: isLoading,
         cards: data ? [data] : []
     }
+}
+
+function useWakeLock() {
+    const wakeLock = useRef<WakeLockSentinel>();
+
+    useEffect(() => {
+        if ('wakeLock' in window.navigator) {
+            navigator.wakeLock
+                .request('screen')
+                .then(wakeLockSentinel => {
+                    wakeLock.current = wakeLockSentinel
+                })
+
+            return () => {
+                wakeLock.current?.release();
+            }
+        }
+    })
 }
 
 function App() {
@@ -139,6 +157,10 @@ function App() {
         setPlayedCards((currentPlayedCards) => currentPlayedCards + 1);
     }, []);
 
+    const remainingCards = maxCards - playedCards;
+
+    useWakeLock();
+
     return (
         <>
             <h1>Current Wave{wave > 0 ? `: ${wave}` : ''}</h1>
@@ -147,22 +169,24 @@ function App() {
                 flexDirection: 'column'
             }}>
                 <div>
-                    Horde Strength:
+                    Remaining Horde Strength:
                 </div>
                 <div>
-                    {maxCards - playedCards} / {maxCards}
+                    {remainingCards} / {maxCards}
                 </div>
                 <div style={{
                     display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'center',
                     flexWrap: 'wrap',
                     rowGap: '16px',
                     columnGap: '16px'
-                }}>
-                    <button onClick={handleClickGenerateHorde} disabled={loadingNonTokenZombie || loadingZombieTokens}>
+                }}>                    
+                    <button onClick={handleClickGenerateHorde} disabled={loadingNonTokenZombie || loadingZombieTokens || remainingCards <= 0}>
                         {Object.keys(selectedZombieTokens).length ? 'Release More of the Horde!' : 'Release the Horde'}
                     </button>
-                    <button onClick={handleClickWeakenHorde}>
+                    <span> | </span>
+                    <button onClick={handleClickWeakenHorde} disabled={remainingCards <= 0}>
                         Decrease the Horde
                     </button>
                 </div>
